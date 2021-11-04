@@ -6,6 +6,8 @@ I've added the possibility to alias types, e.g. if you're making files for `some
 output functions like `MyTypeQueue` rather than the upstream behaviour which is `SomepackageMyTypeQueue`. Works with
 this syntax: `Generic=myalias:somepackage.MyType,nonaliasedType,...`.
 
+Just clone in and `go install` to get the binaries in your path.
+
 ---
 
 [![Build Status](https://travis-ci.org/cheekybits/genny.svg?branch=master)](https://travis-ci.org/cheekybits/genny) [![GoDoc](https://godoc.org/github.com/cheekybits/genny/parse?status.png)](http://godoc.org/github.com/cheekybits/genny/parse)
