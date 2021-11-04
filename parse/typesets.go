@@ -1,14 +1,35 @@
 package parse
 
-import "strings"
+import (
+	"log"
+	"strings"
+)
 
 const (
 	typeSep     = " "
 	keyValueSep = "="
 	valuesSep   = ","
+	aliasSep    = ":"
 	builtins    = "BUILTINS"
 	numbers     = "NUMBERS"
 )
+
+type TypeRef struct {
+	Alias string
+	Type  string
+}
+
+func ParseTypeRef(s string) TypeRef {
+	vals := strings.Split(s, aliasSep)
+	if len(vals) == 1 {
+		return TypeRef{Alias: vals[0], Type: vals[0]}
+	} else if len(vals) == 2 {
+		return TypeRef{Alias: vals[0], Type: vals[1]}
+	} else {
+		log.Panicf("couldn't parse typesets: '%s'", s)
+		return TypeRef{}
+	}
+}
 
 // TypeSet turns a type string into a []map[string]string
 // that can be given to parse.Generics for it to do its magic.
@@ -16,11 +37,12 @@ const (
 // Acceptable args are:
 //
 //     Person=man
+//     Person=myAlias:int
 //     Person=man Animal=dog
 //     Person=man Animal=dog Animal2=cat
-//     Person=man,woman Animal=dog,cat
+//     Person=guy:man,girl:woman Animal=dog,cat
 //     Person=man,woman,child Animal=dog,cat Place=london,paris
-func TypeSet(arg string) ([]map[string]string, error) {
+func TypeSet(arg string) ([]map[string]TypeRef, error) {
 
 	types := make(map[string][]string)
 	var keys []string
@@ -48,13 +70,13 @@ func TypeSet(arg string) ([]map[string]string, error) {
 		cursors[key] = 0
 	}
 
-	outChan := make(chan map[string]string)
+	outChan := make(chan map[string]TypeRef)
 	go func() {
 		buildTypeSet(keys, 0, cursors, types, outChan)
 		close(outChan)
 	}()
 
-	var typeSets []map[string]string
+	var typeSets []map[string]TypeRef
 	for typeSet := range outChan {
 		typeSets = append(typeSets, typeSet)
 	}
@@ -63,16 +85,16 @@ func TypeSet(arg string) ([]map[string]string, error) {
 
 }
 
-func buildTypeSet(keys []string, keyI int, cursors map[string]int, types map[string][]string, out chan<- map[string]string) {
+func buildTypeSet(keys []string, keyI int, cursors map[string]int, types map[string][]string, out chan<- map[string]TypeRef) {
 	key := keys[keyI]
 	for cursors[key] < len(types[key]) {
 		if keyI < len(keys)-1 {
 			buildTypeSet(keys, keyI+1, copycursors(cursors), types, out)
 		} else {
 			// build the typeset for this combination
-			ts := make(map[string]string)
+			ts := make(map[string]TypeRef)
 			for k, vals := range types {
-				ts[k] = vals[cursors[k]]
+				ts[k] = ParseTypeRef(vals[cursors[k]])
 			}
 			out <- ts
 		}

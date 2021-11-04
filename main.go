@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cheekybits/genny/out"
 	"github.com/cheekybits/genny/parse"
 )
 
@@ -133,7 +132,7 @@ func newWriter(fileName string) io.Writer {
 	if fileName == "" {
 		return os.Stdout
 	}
-	lf := &out.LazyFile{FileName: fileName}
+	lf := &parse.LazyFile{FileName: fileName}
 	defer lf.Close()
 	return lf
 }
@@ -144,7 +143,7 @@ func fatal(code int, a ...interface{}) {
 }
 
 // gen performs the generic generation.
-func gen(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typesets []map[string]string, out io.Writer) error {
+func gen(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typesets []map[string]parse.TypeRef, out io.Writer) error {
 
 	var output []byte
 	var err error

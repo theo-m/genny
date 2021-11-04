@@ -1,7 +1,7 @@
-package out_test
+package parse_test
 
 import (
-	"github.com/cheekybits/genny/out"
+	"github.com/cheekybits/genny/parse"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -31,7 +31,7 @@ func assertFileContains(t *testing.T, expected string) {
 
 func TestMultipleWrites(t *testing.T) {
 	defer tearDown()
-	lf := out.LazyFile{FileName: testFileName}
+	lf := parse.LazyFile{FileName: testFileName}
 	defer lf.Close()
 	lf.Write([]byte("Word1"))
 	lf.Write([]byte("Word2"))
@@ -40,7 +40,7 @@ func TestMultipleWrites(t *testing.T) {
 
 func TestNoWrite(t *testing.T) {
 	defer tearDown()
-	lf := out.LazyFile{FileName: testFileName}
+	lf := parse.LazyFile{FileName: testFileName}
 	defer lf.Close()
 	_, err := os.Stat(testFileName)
 	assert.True(t, os.IsNotExist(err), "Expected file not to be created")

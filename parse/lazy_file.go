@@ -1,4 +1,4 @@
-package out
+package parse
 
 import (
 	"os"
