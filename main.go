@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -148,6 +149,7 @@ func gen(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, typese
 	var output []byte
 	var err error
 
+	log.Printf("genny running for '%s' (=> '%s')", filename, outputFilename)
 	output, err = parse.Generics(filename, outputFilename, pkgName, tag, in, typesets)
 	if err != nil {
 		return err
