@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/scanner"
 	"go/token"
@@ -12,8 +13,6 @@ import (
 	"os"
 	"strings"
 	"unicode"
-
-	"golang.org/x/tools/imports"
 )
 
 var header = []byte(`
@@ -91,7 +90,7 @@ func subTypeIntoLine(line, typeTemplate string, specificType TypeRef) string {
 func generateSpecific(filename string, in io.ReadSeeker, typeSet map[string]TypeRef) ([]byte, error) {
 
 	// ensure we are at the beginning of the file
-	in.Seek(0, os.SEEK_SET)
+	in.Seek(0, io.SeekStart)
 
 	// parse the source file
 	fs := token.NewFileSet()
@@ -196,6 +195,7 @@ func Generics(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, t
 	packageFound := false
 	insideImportBlock := false
 	var cleanOutputLines []string
+	var importLines []string
 	scanner := bufio.NewScanner(bytes.NewReader(totalOutput))
 	for scanner.Scan() {
 
@@ -203,6 +203,10 @@ func Generics(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, t
 		if insideImportBlock {
 			if bytes.HasSuffix(scanner.Bytes(), closeBrace) {
 				insideImportBlock = false
+			} else {
+				if !strings.HasSuffix(strings.TrimRight(scanner.Text(), "\r\n"), "genny/generic\"") {
+					importLines = append(importLines, makeLine(scanner.Text()))
+				}
 			}
 			continue
 		}
@@ -239,19 +243,22 @@ func Generics(filename, outputFilename, pkgName, tag string, in io.ReadSeeker, t
 	cleanOutput := strings.Join(cleanOutputLines, "")
 
 	output := []byte(cleanOutput)
-	var err error
 
 	// change package name
 	if pkgName != "" {
-		output = changePackage(bytes.NewReader([]byte(output)), pkgName)
-	}
-	// fix the imports
-	output, err = imports.Process(outputFilename, output, nil)
-	if err != nil {
-		return nil, &errImports{Err: err}
+		uniqueImports := map[string]bool{}
+		for _, line := range importLines {
+			uniqueImports[strings.TrimSpace(line)] = true
+		}
+		uniqueImportsL := []string{}
+		for line, _ := range uniqueImports {
+			uniqueImportsL = append(uniqueImportsL, line)
+		}
+		importBlock := fmt.Sprintf("\nimport (\n%s\n)\n", strings.Join(uniqueImportsL, "\n"))
+		output = changePackage(bytes.NewReader([]byte(output)), pkgName, importBlock)
 	}
 
-	return output, nil
+	return format.Source(output)
 }
 
 func makeLine(s string) string {
@@ -275,7 +282,7 @@ func wordify(s string, exported bool) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-func changePackage(r io.Reader, pkgName string) []byte {
+func changePackage(r io.Reader, pkgName, importSrc string) []byte {
 	var out bytes.Buffer
 	sc := bufio.NewScanner(r)
 	done := false
@@ -287,6 +294,7 @@ func changePackage(r io.Reader, pkgName string) []byte {
 			parts := strings.Split(s, " ")
 			parts[1] = pkgName
 			s = strings.Join(parts, " ")
+			s += importSrc
 			done = true
 		}
 
